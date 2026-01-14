@@ -15,16 +15,16 @@ app.set('views', path.join(__dirname , '/pages'));
 app.get("/", (req,res) =>{
     console.log(req.query);
 
-    if(req.query.oloco == null){
+    if(req.query.busca == null){
         res.render('home', {});
     }
     else{
-        res.send("Você está buscando: "+req.query.oloco)
+        res.render("busca", {});
     }
 })
 
 app.get("/:slug", (req,res) => {
-    res.send(req.params.slug);
+    res.render('single',{});
 });
 
 app.listen(5010,() => {
