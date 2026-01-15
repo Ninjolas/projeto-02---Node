@@ -1,8 +1,17 @@
 const express = require('express');
 const path = require( 'path');
+const mongoose = require('mongoose')
 var bodyParser = require('body-parser');
 
 const app = express();
+
+const Posts = require('./posts.js');
+
+mongoose.connect('mongodb+srv://ninjolas:gPhVrslZY4f7Ades@teste.z16kqae.mongodb.net/teste_notícias').then(()=>{
+    console.log('Conectado ao banco de dados');
+}).catch((err)=>{
+    console.log(err.message);
+})
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -12,19 +21,76 @@ app.set('view engine', 'html');
 app.use('/public', express.static(path.join(__dirname,'public')));
 app.set('views', path.join(__dirname , '/pages'));
 
-app.get("/", (req,res) =>{
-    console.log(req.query);
-
+app.get("/", async(req,res) =>{
     if(req.query.busca == null){
-        res.render('home', {});
+        let posts = await Posts.find({}).sort({'_id':-1}).exec()
+        posts = posts.map((val)=>{
+            return {
+                titulo:val.titulo,
+                imagem:val.imagem,
+                categoria:val.categoria,
+                conteudo:val.conteudo,
+                slug:val.slug,
+                descricaoCurta : val.conteudo.substring(0,100),
+                views: val.views
+            }
+        })
+        
+        let postsTop = await Posts.find({}).sort({'views':-1}).limit(3).exec()
+        postsTop = postsTop.map((val) => {
+            return {
+                titulo:val.titulo,
+                imagem:val.imagem,
+                categoria:val.categoria,
+                conteudo:val.conteudo,
+                slug:val.slug,
+                descricaoCurta : val.conteudo.substring(0,100),
+                views: val.views
+            }
+        })
+        //console.log(posts[0]);
+        res.render('home', {posts:posts, postsTop: postsTop});
     }
     else{
-        res.send("Você está buscando: "+req.query.busca)
+
+        let posts = await Posts.find({titulo: {$regex: req.query.busca, $options: "i"}})
+        posts = posts.map((val)=>{
+            return {
+                titulo:val.titulo,
+                imagem:val.imagem,
+                categoria:val.categoria,
+                conteudo:val.conteudo,
+                slug:val.slug,
+                descricaoCurta : val.conteudo.substring(0,100),
+                views: val.views
+            }
+        })
+        res.render("busca", {posts:posts, contagem:posts.length});
     }
 })
 
-app.get("/:slug", (req,res) => {
-    res.send(req.params.slug);
+app.get("/:slug", async (req,res) => {
+    let noticias = await Posts.findOneAndUpdate({slug: req.params.slug}, {$inc: {views: 1}}, {new: true});
+    if(noticias != null){
+        let postsTop = await Posts.find({}).sort({'views':-1}).limit(3).exec()
+        postsTop = postsTop.map((val) => {
+            return {
+                titulo:val.titulo,
+                imagem:val.imagem,
+                categoria:val.categoria,
+                conteudo:val.conteudo,
+                slug:val.slug,
+                descricaoCurta : val.conteudo.substring(0,100),
+                views: val.views
+            }
+        })
+        //console.log(noticias);
+        res.render('single',{noticia:noticias, postsTop: postsTop});
+    }
+    else{
+        res.redirect("/")
+    }
+    
 });
 
 app.listen(5010,() => {
