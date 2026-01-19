@@ -7,6 +7,8 @@ const app = express();
 
 const Posts = require('./posts.js');
 
+var session = require('express-session');
+
 mongoose.connect('mongodb+srv://ninjolas:gPhVrslZY4f7Ades@teste.z16kqae.mongodb.net/teste_notícias').then(()=>{
     console.log('Conectado ao banco de dados');
 }).catch((err)=>{
@@ -15,6 +17,10 @@ mongoose.connect('mongodb+srv://ninjolas:gPhVrslZY4f7Ades@teste.z16kqae.mongodb.
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+    secret: 'keyboard cat',
+    cookie: {maxAge : 60000}
+}))
 
 app.engine('html', require('ejs').renderFile);
 app.set('view engine', 'html');
@@ -92,6 +98,32 @@ app.get("/:slug", async (req,res) => {
     }
     
 });
+
+var usuarios = [
+    {
+        login: 'Nícolas',
+        senha: "123456789"
+    }
+]
+
+app.post('/admin/login', (req,res)=>{
+    usuarios.map(function(val){
+        if(val.login == req.body.login && val.senha == req.body.senha){
+            req.session.login = "Nícolas";
+            
+        }
+    })
+    res.redirect('/admin/login')
+})
+
+app.get('/admin/login', (req,res)=>{
+    if(req.session.login == null){
+        res.render('admin-login');
+        
+    }else{
+        res.render('admin-panel');
+    }
+})
 
 app.listen(5010,() => {
     console.log('Servidor rodando');
