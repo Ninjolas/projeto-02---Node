@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require( 'path');
 const mongoose = require('mongoose')
+const fileUpload = require('express-fileupload')
 var bodyParser = require('body-parser');
 
 const app = express();
@@ -20,6 +21,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
     secret: 'keyboard cat',
     cookie: {maxAge : 60000}
+}))
+
+app.use(fileupload({
+    useTempFiles : true,
+    tempFileDir : path.join(__dirname, 'temp')
 }))
 
 app.engine('html', require('ejs').renderFile);
@@ -116,13 +122,49 @@ app.post('/admin/login', (req,res)=>{
     res.redirect('/admin/login')
 })
 
-app.get('/admin/login', (req,res)=>{
+app.get('/admin/login', async (req,res)=>{
     if(req.session.login == null){
         res.render('admin-login');
         
     }else{
-        res.render('admin-panel');
+        let posts = await Posts.find({}).sort({'_id':-1}).exec()
+        posts = posts.map((val)=>{
+            return {
+                id: val._id,
+                titulo:val.titulo,
+                imagem:val.imagem,
+                categoria:val.categoria,
+                conteudo:val.conteudo,
+                slug:val.slug,
+                descricaoCurta : val.conteudo.substring(0,100),
+                views: val.views
+            }
+        })
+        res.render('admin-panel', {posts:posts});
     }
+})
+
+app.get('/admin/deletar/:id', async (req,res)=>{
+    await Posts.deleteOne({_id : req.params.id}).then(() =>{
+        res.redirect('/admin/login');
+    })
+    
+})
+
+app.post('/admin/cadastro', async (req,res)=>{
+    console.log(req.body)
+
+    await Posts.create({
+        titulo: req.body.titulo_noticia,
+        imagem: req.body.url_imagem,
+        categoria: "Nenhuma",
+        conteudo: req.body.noticia,
+        slug: req.body.slug,
+        autor: "Admin",
+        views: 0
+    })
+
+    res.redirect("/admin/login")
 })
 
 app.listen(5010,() => {
