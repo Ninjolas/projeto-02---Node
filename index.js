@@ -3,6 +3,7 @@ const path = require( 'path');
 const mongoose = require('mongoose')
 const fileUpload = require('express-fileupload')
 var bodyParser = require('body-parser');
+const fs = require('fs')
 
 const app = express();
 
@@ -23,7 +24,7 @@ app.use(session({
     cookie: {maxAge : 60000}
 }))
 
-app.use(fileupload({
+app.use(fileUpload({
     useTempFiles : true,
     tempFileDir : path.join(__dirname, 'temp')
 }))
@@ -152,11 +153,20 @@ app.get('/admin/deletar/:id', async (req,res)=>{
 })
 
 app.post('/admin/cadastro', async (req,res)=>{
-    console.log(req.body)
+    let formato = req.files.arquivo.name.split('.');
+    var imagem = ""
+
+    if (formato[formato.length - 1] == 'jpg'){
+        var imagem = new Date().getTime()+'.jpg'
+        req.files.arquivo.mv(__dirname + '/public/images' + imagem);
+    }
+    else{
+        fs.unlinkSync(req.files.arquivo.tempFilePath);
+    }
 
     await Posts.create({
         titulo: req.body.titulo_noticia,
-        imagem: req.body.url_imagem,
+        imagem: "http://localhost:5010/public/images" + imagem,
         categoria: "Nenhuma",
         conteudo: req.body.noticia,
         slug: req.body.slug,
